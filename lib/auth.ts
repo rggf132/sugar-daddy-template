@@ -3,7 +3,11 @@ import type { NextAuthConfig } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import { db } from 'db'
-import { user as userTable } from 'db/schema'
+import {
+  user as userTable,
+  account as accountTable,
+  session as sessionTable,
+} from 'db/schema'
 import { eq } from 'drizzle-orm'
 
 declare module 'next-auth' {
@@ -28,7 +32,11 @@ export const authConfig = {
   pages: {
     signIn: '/',
   },
-  adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db, {
+    usersTable: userTable as any,
+    accountsTable: accountTable as any,
+    sessionsTable: sessionTable as any,
+  }),
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'database',

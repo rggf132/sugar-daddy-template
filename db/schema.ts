@@ -11,8 +11,15 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/mysql-core'
+import { domainConfig } from 'src/domain.config'
 
-export const user = mysqlTable('user', {
+const p = domainConfig.tablePrefix
+
+// ──────────────────────────────────────────────────────────
+// Auth tables (prefixed per app)
+// ──────────────────────────────────────────────────────────
+
+export const user = mysqlTable(`${p}_user`, {
   id: varchar('id', { length: 255 }).notNull().primaryKey(),
   name: varchar('name', { length: 255 }),
   description: varchar('description', { length: 255 }),
@@ -26,7 +33,7 @@ export const user = mysqlTable('user', {
 })
 
 export const account = mysqlTable(
-  'account',
+  `${p}_account`,
   {
     userId: varchar('userId', { length: 255 })
       .notNull()
@@ -51,7 +58,7 @@ export const account = mysqlTable(
   }),
 )
 
-export const session = mysqlTable('session', {
+export const session = mysqlTable(`${p}_session`, {
   sessionToken: varchar('sessionToken', { length: 255 }).notNull().primaryKey(),
   userId: varchar('userId', { length: 255 })
     .notNull()
@@ -59,8 +66,12 @@ export const session = mysqlTable('session', {
   expires: timestamp('expires', { mode: 'date' }).notNull(),
 })
 
+// ──────────────────────────────────────────────────────────
+// Domain tables (prefixed per app)
+// ──────────────────────────────────────────────────────────
+
 export const event = mysqlTable(
-  'event',
+  `${p}_event`,
   {
     id: serial('id').primaryKey(),
     title: varchar('title', { length: 191 }),
@@ -91,12 +102,11 @@ export const event = mysqlTable(
     creator_id: index('creator_id_idx').on(table.creator_id),
     country_idIdx: index('country_id_idx').on(table.country_id),
     city_idIdx: index('city_id_idx').on(table.city_id),
-    titleIdx: index('event_title_idx').on(table.title), // For title search
-    startIdx: index('event_start_idx').on(table.start), // For date range queries
-    endIdx: index('event_end_idx').on(table.end), // For date range queries
-    entryTypeIdx: index('event_entry_type_idx').on(table.entry_type), // For entry type filtering
-    createdAtIndex: index('event_created_at_idx').on(table.created_at), // For ordering
-    // Composite indexes for common query patterns
+    titleIdx: index('event_title_idx').on(table.title),
+    startIdx: index('event_start_idx').on(table.start),
+    endIdx: index('event_end_idx').on(table.end),
+    entryTypeIdx: index('event_entry_type_idx').on(table.entry_type),
+    createdAtIndex: index('event_created_at_idx').on(table.created_at),
     countryCityIdx: index('event_country_city_idx').on(
       table.country_id,
       table.city_id,
@@ -107,6 +117,32 @@ export const event = mysqlTable(
     ),
   }),
 )
+
+export const eventToSubCategory = mysqlTable(
+  `${p}_event_to_sub_category`,
+  {
+    id: serial('id').primaryKey(),
+    event_id: bigint('event_id', { mode: 'bigint', unsigned: true }),
+    sub_category_id: bigint('sub_category_id', {
+      mode: 'bigint',
+      unsigned: true,
+    }),
+  },
+  (table) => ({
+    eventIdIdx: index('esc_event_id_idx').on(table.event_id),
+    subCategoryIdIdx: index('esc_sub_category_id_idx').on(
+      table.sub_category_id,
+    ),
+    eventSubCategoryIdx: index('esc_event_sub_category_idx').on(
+      table.event_id,
+      table.sub_category_id,
+    ),
+  }),
+)
+
+// ──────────────────────────────────────────────────────────
+// Shared tables (NO prefix -- shared across all apps)
+// ──────────────────────────────────────────────────────────
 
 export const category = mysqlTable('category', {
   id: serial('id').primaryKey(),
@@ -130,28 +166,6 @@ export const subCategory = mysqlTable('sub_category', {
     .onUpdateNow(),
 })
 
-export const eventToSubCategory = mysqlTable(
-  'event_to_sub_category',
-  {
-    id: serial('id').primaryKey(),
-    event_id: bigint('event_id', { mode: 'bigint', unsigned: true }),
-    sub_category_id: bigint('sub_category_id', {
-      mode: 'bigint',
-      unsigned: true,
-    }),
-  },
-  (table) => ({
-    eventIdIdx: index('esc_event_id_idx').on(table.event_id),
-    subCategoryIdIdx: index('esc_sub_category_id_idx').on(
-      table.sub_category_id,
-    ),
-    eventSubCategoryIdx: index('esc_event_sub_category_idx').on(
-      table.event_id,
-      table.sub_category_id,
-    ),
-  }),
-)
-
 export const country = mysqlTable(
   'country',
   {
@@ -167,8 +181,8 @@ export const country = mysqlTable(
       .onUpdateNow(),
   },
   (table) => ({
-    nameIdx: index('country_name_idx').on(table.name), // For search operations
-    iso2Idx: index('country_iso2_idx').on(table.iso2), // For ISO code lookups
+    nameIdx: index('country_name_idx').on(table.name),
+    iso2Idx: index('country_iso2_idx').on(table.iso2),
   }),
 )
 
@@ -188,11 +202,11 @@ export const city = mysqlTable(
       .onUpdateNow(),
   },
   (table) => ({
-    nameIdx: index('city_name_idx').on(table.name), // For search operations
-    countryIdIdx: index('city_country_id_idx').on(table.country_id), // For country lookups
+    nameIdx: index('city_name_idx').on(table.name),
+    countryIdIdx: index('city_country_id_idx').on(table.country_id),
     nameCountryIdx: index('city_name_country_idx').on(
       table.name,
       table.country_id,
-    ), // Composite index for search within country
+    ),
   }),
 )
